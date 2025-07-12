@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 
+ * =========================================
+ *  ANIMATED GRADIENT BACKGROUND
+ * =========================================
+ * Ini akan menciptakan efek pergerakan cahaya atau uap yang sangat halus.
+ */
+body {
+    /* 
+     * Gradient dengan 4 titik warna tema coffee shop:
+     * - zinc-900 (#18181b): Hitam pekat
+     * - stone-800 (#292524): Coklat sangat gelap
+     * - amber-950 (#451a03): Coklat kemerahan (seperti biji kopi sangrai)
+     * - zinc-800 (#27272a): Abu-abu sangat gelap
+     */
+    background: linear-gradient(-45deg, #18181b, #292524, #451a03, #27272a);
+    
+    /* 
+     * Ukuran background dibuat 4x lebih besar dari layar.
+     * Ini penting agar ada ruang bagi gradient untuk bergerak.
+     */
+    background-size: 400% 400%;
+    
+    /* 
+     * Menjalankan animasi bernama 'gradient'
+     * - Durasi: 15 detik per siklus
+     * - Timing: ease-in-out (bergerak lambat di awal & akhir)
+     * - Iterasi: infinite (berulang selamanya)
+     */
+    animation: gradient 15s ease-in-out infinite;
+    
+    /* Pastikan tinggi body minimal setinggi layar */
+    min-height: 100vh;
+}
+
+/* 
+ * Mendefinisikan keyframes untuk animasi 'gradient'.
+ * Kita menggeser posisi background dari satu sudut ke sudut lain.
+ */
+@keyframes gradient {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+
+/* 
+ * =========================================
+ *  KUSTOMISASI SCROLLBAR (Opsional, tapi sangat direkomendasikan)
+ * =========================================
+ * Membuat scrollbar menyatu dengan tema.
+ */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #18181b; /* Warna track sama seperti background */
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #d97706; /* Warna amber-600, sesuai aksen */
+    border-radius: 20px;
+    border: 2px solid #18181b; /* Border yang sama dengan track */
+}
