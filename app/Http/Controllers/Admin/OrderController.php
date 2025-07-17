@@ -4,58 +4,82 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\OrderDetail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class OrderController extends Controller
 {
     /**
-     * Menampilkan daftar semua pesanan dengan paginasi.
-     * Eager loading digunakan untuk performa optimal.
+     * Menampilkan daftar semua pesanan.
      */
     public function index()
     {
-        // PERBAIKAN: Menggunakan with() dengan relasi bersarang (nested)
-        // untuk mengambil data produk dari order detail.
-        // PERBAIKAN: Menggunakan paginate() untuk menangani data yang besar.
         $orders = Order::with(['user', 'details.product'])
                         ->latest()
-                        ->paginate(10); // Menampilkan 10 pesanan per halaman
+                        ->paginate(10);
                         
         return view('admin.orders.index', compact('orders'));
     }
 
+    // ==========================================================
+    // == METHOD BARU YANG DITAMBAHKAN UNTUK KONFIRMASI PEMBAYARAN ==
+    // ==========================================================
     /**
-     * Menerima pesanan yang statusnya 'pending'.
+     * Mengkonfirmasi pembayaran secara manual dan mengubah status menjadi 'paid'.
      */
-    public function accept(Order $order)
+    public function confirmPayment(Order $order)
     {
-        // PERBAIKAN: Memastikan hanya pesanan 'pending' yang bisa diubah.
-        // Ini mencegah pengguna mengubah status pesanan yang sudah selesai atau ditolak.
-        if ($order->status !== 'pending') {
-            return back()->with('error', 'Status pesanan ini sudah tidak bisa diubah.');
+        // Hanya izinkan konfirmasi jika statusnya 'unpaid' atau 'pending'
+        if (!in_array($order->status, ['unpaid', 'pending'])) {
+            return back()->with('error', 'Pesanan ini tidak perlu dikonfirmasi lagi.');
         }
 
-        $order->update(['status' => 'completed']); // 'completed' lebih jelas daripada 'accepted'
-        
-        return back()->with('success', "Pesanan #{$order->id} berhasil diselesaikan.");
+        // Ubah status menjadi 'paid'
+        $order->update(['status' => 'paid']);
+
+        return back()->with('success', "Pembayaran untuk Pesanan #{$order->id} berhasil dikonfirmasi.");
     }
 
     /**
-     * Menolak pesanan 'pending' dengan alasan yang jelas.
+     * Mengubah status pesanan dari 'paid' menjadi 'processing'.
+     */
+    public function process(Order $order)
+    {
+        if ($order->status !== 'paid') {
+            return back()->with('error', 'Hanya pesanan yang sudah lunas yang bisa diproses.');
+        }
+
+        $order->update(['status' => 'processing']);
+
+        return back()->with('success', "Pesanan #{$order->id} sedang diproses.");
+    }
+
+    /**
+     * Mengubah status pesanan dari 'processing' menjadi 'completed'.
+     */
+    public function complete(Order $order)
+    {
+        if ($order->status !== 'processing') {
+            return back()->with('error', 'Hanya pesanan yang sedang diproses yang bisa diselesaikan.');
+        }
+        
+        $order->update(['status' => 'completed']);
+
+        return back()->with('success', "Pesanan #{$order->id} telah selesai.");
+    }
+
+    /**
+     * Menolak pesanan yang belum dikonfirmasi.
      */
     public function reject(Request $request, Order $order)
     {
-        // PERBAIKAN: Validasi status yang sama seperti di method accept().
-        if ($order->status !== 'pending') {
-            return back()->with('error', 'Status pesanan ini sudah tidak bisa diubah.');
+        if (!in_array($order->status, ['unpaid', 'pending'])) {
+            return back()->with('error', 'Status pesanan ini tidak bisa ditolak.');
         }
         
-        // PERBAIKAN: Validasi yang lebih ketat dan pesan error yang lebih baik.
         $validated = $request->validate([
             'rejection_reason' => 'required|string|min:5|max:255'
-        ], [
-            'rejection_reason.required' => 'Alasan penolakan wajib diisi.',
-            'rejection_reason.min' => 'Alasan penolakan minimal 5 karakter.',
         ]);
 
         $order->update([
@@ -71,24 +95,20 @@ class OrderController extends Controller
      */
     public function destroy(Order $order)
     {
-        // PERBAIKAN: Tidak ada perubahan, kode Anda sudah optimal.
-        // `back()` sangat baik digunakan di sini karena akan mempertahankan
-        // halaman paginasi dan filter yang mungkin ada.
         $order->delete();
         return back()->with('success', "Pesanan #{$order->id} berhasil dihapus.");
     }
 
     /**
      * Menghapus SEMUA pesanan dari database.
-     * Ini adalah aksi yang berbahaya, bisa ditambahkan otorisasi tambahan jika perlu.
      */
     public function destroyAll()
     {
-        // PERBAIKAN: Menggunakan truncate() lebih cepat dan me-reset auto-increment ID.
-        // Ini adalah cara yang paling efisien untuk mengosongkan tabel.
-        // Method ini tidak akan error jika tabel sudah kosong.
+        Schema::disableForeignKeyConstraints();
+        OrderDetail::truncate();
         Order::truncate();
+        Schema::enableForeignKeyConstraints();
 
-        return redirect()->route('admin.orders.index')->with('success', 'Semua riwayat pesanan berhasil dihapus secara permanen.');
+        return redirect()->route('admin.orders.index')->with('success', 'Semua riwayat pesanan berhasil dihapus.');
     }
 }

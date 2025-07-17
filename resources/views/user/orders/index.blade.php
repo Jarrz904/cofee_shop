@@ -1,145 +1,103 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+        <h2 class="font-semibold text-xl text-gray-300 dark:text-gray-200 leading-tight">
             {{ __('Riwayat Pesanan Saya') }}
         </h2>
     </x-slot>
 
     <div class="py-12">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
+
+            {{-- Tampilkan pesan sukses --}}
+            @if(session('success'))
+                <div class="bg-green-100 dark:bg-green-900 border-l-4 border-green-500 text-green-700 dark:text-green-200 p-4 mb-6" role="alert">
+                    <p>{{ session('success') }}</p>
+                </div>
+            @endif
+
+            {{-- ========================================================== --}}
+            {{-- == BAGIAN 1: PESANAN YANG MENUNGGU KONFIRMASI / PEMBAYARAN == --}}
+            {{-- ========================================================== --}}
+            
+            {{-- PERBAIKAN: Menggunakan $pendingOrders --}}
+            @if($pendingOrders->isNotEmpty())
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold mb-4 text-gray-300 dark:text-gray-100">Pesanan Aktif</h3>
+                    <div class="space-y-4">
+                        {{-- PERBAIKAN: Menggunakan $pendingOrders --}}
+                        @foreach($pendingOrders as $order)
+                            <div class="bg-yellow-50 dark:bg-gray-800/50 border-l-4 border-yellow-400 dark:border-yellow-600 rounded-lg p-4">
+                                {{-- Tampilkan detail pesanan yang sedang menunggu --}}
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="font-bold text-gray-800 dark:text-gray-200">Pesanan #{{ $order->id }}</p>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">Tanggal: {{ $order->created_at->format('d M Y, H:i') }}</p>
+                                    </div>
+                                    <p class="text-lg font-semibold text-gray-800 dark:text-gray-200">Rp {{ number_format($order->total_price) }}</p>
+                                </div>
+                                <div class="border-t my-3 dark:border-gray-600"></div>
+                                <div>
+                                    <strong class="text-gray-800 dark:text-gray-200">Detail Pesanan:</strong>
+                                    <ul class="list-disc list-inside mt-2 text-sm text-gray-600 dark:text-gray-300">
+                                        @foreach($order->details as $detail)
+                                            <li>{{ $detail->quantity }}x {{ $detail->product->name ?? 'Produk Dihapus' }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                                <p class="mt-3 text-sm text-gray-800 dark:text-gray-200">
+                                    <strong>Status:</strong>
+                                    <span class="font-semibold text-yellow-700 dark:text-yellow-400">{{ ucfirst($order->status) }}</span>
+                                </p>
+                                {{-- Anda bisa menambahkan tombol "Bayar Sekarang" di sini jika menggunakan alur Midtrans --}}
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
+            {{-- ========================================================== --}}
+            {{-- == BAGIAN 2: RIWAYAT TRANSAKSI YANG SUDAH SELESAI == --}}
+            {{-- ========================================================== --}}
             <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900 dark:text-gray-100">
-                    <h3 class="text-lg font-medium mb-4">Daftar Pesanan Anda</h3>
+                    <h3 class="text-lg font-medium mb-4">Riwayat Transaksi</h3>
                     
-                    @if($orders->isEmpty())
-                        <p class="text-gray-500 dark:text-gray-400">Anda belum memiliki riwayat pesanan.</p>
+                    {{-- PERBAIKAN: Menggunakan $historyOrders --}}
+                    @if($historyOrders->isEmpty())
+                        <p class="text-gray-500 dark:text-gray-400">Anda belum memiliki riwayat transaksi.</p>
                     @else
                         <div class="space-y-6">
-                            @foreach($orders as $order)
-                                <div class="border dark:border-gray-700 rounded-lg p-4">
-                                    {{-- Detail Pesanan Anda yang sudah ada --}}
+                            {{-- PERBAIKAN: Menggunakan $historyOrders --}}
+                            @foreach($historyOrders as $order)
+                                <div class="border-b dark:border-gray-700 pb-4 last:border-b-0 last:pb-0">
+                                    {{-- Tampilkan detail order yang sudah lunas/selesai/gagal --}}
                                     <div class="flex justify-between items-start">
                                         <div>
                                             <p class="font-bold">Pesanan #{{ $order->id }}</p>
                                             <p class="text-sm text-gray-500 dark:text-gray-400">Tanggal: {{ $order->created_at->format('d M Y, H:i') }}</p>
                                         </div>
-                                        <div>
-                                            {{-- Ganti 'total_price' dengan kolom yang benar, misal 'total_amount' --}}
-                                            <p class="text-lg font-semibold">Rp {{ number_format($order->total_price, 0, ',', '.') }}</p>
-                                        </div>
+                                        <p class="text-lg font-semibold">Rp {{ number_format($order->total_price) }}</p>
                                     </div>
-                                    <div class="border-t my-3 dark:border-gray-600"></div>
-                                    <div>
-                                        <strong>Detail Pesanan:</strong>
-                                        <ul class="list-disc list-inside mt-2 text-sm">
-                                            @foreach($order->details as $detail)
-                                                <li>{{ $detail->quantity }}x {{ $detail->product->name ?? 'Produk Dihapus' }}</li>
-                                            @endforeach
-                                        </ul>
-                                    </div>
-                                    <div class="mt-3">
-                                        <p class="text-sm">
-                                            <strong>Status:</strong>
-                                            <span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                @if($order->status == 'pending') bg-yellow-100 text-yellow-800 @elseif($order->status == 'paid') bg-blue-100 text-blue-800 @else bg-green-100 text-green-800 @endif">
-                                                {{ ucfirst($order->status) }}
-                                            </span>
-                                        </p>
-                                    </div>
-
-                                    {{-- Tombol Bayar Sekarang (sudah ada) --}}
-                                    @if($order->status == 'pending')
-                                        <div class="mt-4 text-right">
-                                            <button 
-                                                class="pay-button inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition ease-in-out duration-150"
-                                                data-order-id="{{ $order->id }}">
-                                                BAYAR SEKARANG
-                                            </button>
-                                        </div>
-                                    @endif
+                                    <p class="mt-3 text-sm">
+                                        <strong>Status:</strong>
+                                        <span class="font-semibold 
+                                            @if($order->status == 'paid' || $order->status == 'completed') text-green-600 dark:text-green-400 
+                                            @elseif($order->status == 'rejected' || $order->status == 'failed') text-red-600 dark:text-red-400 
+                                            @else text-gray-600 dark:text-gray-400 @endif">
+                                            {{ ucfirst($order->status) }}
+                                        </span>
+                                    </p>
                                 </div>
                             @endforeach
                         </div>
                     @endif
                 </div>
             </div>
+
+            {{-- PERBAIKAN: Tampilkan link paginasi untuk $historyOrders --}}
             <div class="mt-4">
-                {{-- Paginasi Anda --}}
-                {{ $orders->links() }}
+                {{ $historyOrders->links() }}
             </div>
         </div>
     </div>
-
-    {{-- ========================================================== --}}
-    {{-- == SCRIPT UNTUK MEMBUAT TOMBOL BAYAR MENJADI FUNGSIONAL == --}}
-    {{-- ========================================================== --}}
-@push('scripts')
-<script type="text/javascript">
-    document.addEventListener('DOMContentLoaded', function () {
-        const payButtons = document.querySelectorAll('.pay-button');
-
-        payButtons.forEach(button => {
-            button.addEventListener('click', function (event) {
-                event.preventDefault();
-
-                const orderId = this.dataset.orderId;
-                const payButtonElement = this;
-
-                payButtonElement.disabled = true;
-                payButtonElement.textContent = 'MEMPROSES...';
-
-                // ===================================
-                // == PERBAIKAN: URL dan CSRF Token ==
-                // ===================================
-
-                // 1. Buat URL secara dinamis dan andal
-                const urlTemplate = "{{ route('order.pay_again', ['order' => ':orderId']) }}";
-                const finalUrl = urlTemplate.replace(':orderId', orderId);
-
-                fetch(finalUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        // 2. Ambil CSRF token dari meta tag
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    }
-                })
-                .then(response => {
-                    // Tambahkan pengecekan ini untuk debug yang lebih baik
-                    if (!response.ok) {
-                        // Jika status bukan 200-299, lemparkan error untuk ditangkap .catch()
-                        throw new Error(`HTTP error! Status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.snap_token) {
-                        window.snap.pay(data.snap_token, {
-                            // ... semua callback Anda (onSuccess, onError, dll)
-                            onSuccess: function(result){
-                                alert("Pembayaran berhasil!");
-                                window.location.reload();
-                            },
-                            onClose: function(){
-                                payButtonElement.disabled = false;
-                                payButtonElement.textContent = 'BAYAR SEKARANG';
-                            }
-                        });
-                    } else {
-                        alert(data.error || 'Gagal memproses pembayaran.');
-                        payButtonElement.disabled = false;
-                        payButtonElement.textContent = 'BAYAR SEKARANG';
-                    }
-                })
-                .catch(error => {
-                    console.error('Fetch Error:', error);
-                    alert('Terjadi kesalahan. Tidak dapat terhubung ke server atau respons tidak valid.');
-                    payButtonElement.disabled = false;
-                    payButtonElement.textContent = 'BAYAR SEKARANG';
-                });
-            });
-        });
-    });
-</script>
-@endpush
 </x-app-layout>

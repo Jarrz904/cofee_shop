@@ -62,15 +62,15 @@
                                         {{-- == PERUBAHAN 1: Menambahkan Status Pembayaran == --}}
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                                @switch($order->status)
-                                                    @case('pending')    bg-yellow-500/20 text-yellow-300 @break
-                                                    @case('paid')       bg-blue-500/20 text-blue-300    @break {{-- Lunas --}}
-                                                    @case('processing') bg-orange-500/20 text-orange-300 @break {{-- Diproses --}}
-                                                    @case('completed')  bg-green-500/20 text-green-300   @break
-                                                    @case('rejected')   bg-red-500/20 text-red-300       @break
-                                                    @case('failed')     bg-red-500/20 text-red-300       @break
-                                                    @default            bg-gray-500/20 text-gray-300
-                                                @endswitch
+                                               @if($order->status == 'pending')
+                                                    {{-- Tombol Terima/Tolak untuk pesanan pending --}}
+                                                    
+                                                @elseif($order->status == 'paid')
+                                                    {{-- Tombol untuk memproses pesanan yang sudah lunas --}}
+                                                    
+                                                @elseif($order->status == 'processing')
+                                                    {{-- Tombol untuk menyelesaikan pesanan --}}
+                                                @endif
                                             ">
                                                 {{ ucfirst($order->status) }}
                                             </span>
@@ -83,40 +83,28 @@
                                         {{-- == PERUBAHAN 2: Aksi Dinamis Berdasarkan Status Pembayaran == --}}
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                             <div class="flex flex-col space-y-2">
-                                                @if($order->status == 'pending')
-                                                    {{-- Tombol Terima/Tolak untuk pesanan yang belum dibayar --}}
-                                                    <div class="flex space-x-4">
-                                                        <form action="{{ route('admin.orders.accept', $order) }}" method="POST" class="inline-block">
-                                                            @csrf
-                                                            @method('PATCH')
-                                                            <button type="submit" class="text-green-400 hover:text-green-300">Terima (COD)</button>
-                                                        </form>
-                                                        <button @click="showModal = true; orderId = {{ $order->id }}; actionUrl = '{{ route('admin.orders.reject', $order) }}'" class="text-yellow-400 hover:text-yellow-300">
-                                                            Tolak
-                                                        </button>
-                                                    </div>
-                                                @elseif($order->status == 'paid')
-                                                    {{-- Tombol untuk memproses pesanan yang sudah lunas --}}
-                                                    <form action="{{ route('admin.orders.process', $order) }}" method="POST">
-                                                        @csrf
-                                                        <button type="submit" class="text-indigo-400 hover:text-indigo-300">Proses Pesanan</button>
-                                                    </form>
-                                                @elseif($order->status == 'processing')
-                                                    {{-- Tombol untuk menyelesaikan pesanan yang sedang diproses --}}
-                                                    <form action="{{ route('admin.orders.complete', $order) }}" method="POST">
-                                                        @csrf
-                                                        <button type="submit" class="text-green-400 hover:text-green-300">Selesaikan</button>
-                                                    </form>
-                                                @endif
-                                                
-                                                {{-- Tombol Hapus selalu ada --}}
-                                                <form action="{{ route('admin.orders.destroy', $order) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus pesanan #{{ $order->id }}?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="text-red-400 hover:text-red-300">Hapus</button>
-                                                </form>
-                                            </div>
-                                        </td>
+                                               @if($order->status == 'unpaid' || $order->status == 'pending')
+                                            {{-- This form sends a request to the server to confirm payment --}}
+                                            <form action="{{ route('admin.orders.confirmPayment', $order) }}" method="POST">
+                                                @csrf
+                                                @method('PATCH') {{-- Using PATCH is semantically correct for an update --}}
+                                                <button type="submit" class="text-green-400 hover:text-green-300">
+                                                    Konfirmasi Pembayaran
+                                                </button>
+                                            </form>
+                                        @elseif($order->status == 'paid')
+                                            {{-- Add other actions for paid orders here --}}
+                                            <span class="text-blue-400">Pesanan Lunas</span>
+                                        @endif
+                                        
+                                        {{-- The delete button is always available --}}
+                                        <form action="{{ route('admin.orders.destroy', $order) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete order #{{ $order->id }}?');" class="mt-2">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-red-400 hover:text-red-300">Hapus</button>
+                                        </form>
+                                    </div>
+                                </td>
                                         {{-- Akhir Perubahan 2 --}}
                                     </tr>
                                     @empty
